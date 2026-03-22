@@ -1,0 +1,106 @@
+const path = require('path');
+const os = require('os');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const express = require('express');
+const cors = require('cors');
+const OpenAI = require('openai');
+const app = express();
+const PORT = process.env.PORT || 3000;
+const useHttps = process.env.USE_HTTPS === '1';
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+app.post('/api/translate', async (req, res) => {
+  try {
+    const { text, sourceLang, targetLang } = req.body;
+
+    if (!text || !sourceLang || !targetLang) {
+      return res.status(400).json({ error: 'Missing text, sourceLang, or targetLang' });
+    }
+
+    const langNames = { cs: 'Czech', en: 'English' };
+    const source = langNames[sourceLang] || sourceLang;
+    const target = langNames[targetLang] || targetLang;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert translator between Czech and English. Translate naturally and idiomatically.
+Rules: Reply with ONLY the translated text, nothing else. No explanations, no quotes, no preamble.
+Preserve the tone (formal/informal) and intent. Use natural phrasing for the target language.`
+        },
+        {
+          role: 'user',
+          content: `Translate from ${source} to ${target}:\n\n${text}`
+        }
+      ],
+      max_tokens: 150,
+      temperature: 0.3
+    });
+
+    const translated = completion.choices[0]?.message?.content?.trim() || '';
+    res.json({ translated });
+  } catch (err) {
+    console.error('Translation error:', err.message);
+    res.status(500).json({
+      error: err.message || 'Translation failed',
+      hint: err.status === 401 ? 'Check your OPENAI_API_KEY in .env' : undefined
+    });
+  }
+});
+
+function getLocalIp() {
+  const ifaces = os.networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    for (const iface of ifaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return 'localhost';
+}
+
+function logUrls() {
+  const protocol = useHttps ? 'https' : 'http';
+  const ip = getLocalIp();
+  console.log(`\n🌐 Live Translator · Czech ↔ English\n`);
+  console.log(`   Desktop:  ${protocol}://localhost:${PORT}`);
+  if (ip !== 'localhost') {
+    console.log(`   Mobile:   ${protocol}://${ip}:${PORT}`);
+    if (!useHttps) {
+      console.log(`\n   💡 For mobile: run "npm run mobile" (HTTPS required for speech)\n`);
+    }
+  } else {
+    console.log('');
+  }
+}
+
+function startServer() {
+  const server = app.listen(PORT, '0.0.0.0', () => logUrls());
+  return server;
+}
+
+if (useHttps) {
+  const selfsigned = require('selfsigned');
+  const attrs = [{ name: 'commonName', value: 'localhost' }];
+  const pem = selfsigned.generate(attrs, { days: 365 });
+  const https = require('https');
+  const server = https.createServer(
+    { key: pem.private, cert: pem.cert },
+    app
+  );
+  server.listen(PORT, '0.0.0.0', () => {
+    logUrls();
+    console.log('   🔒 HTTPS (self-signed) — accept browser warning on first visit\n');
+  });
+} else {
+  startServer();
+}
