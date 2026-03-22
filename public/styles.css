@@ -208,12 +208,14 @@ body {
 .subtitle-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
 
-.play-btn {
+.play-btn,
+.pause-btn {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -230,17 +232,37 @@ body {
   transition: opacity 0.2s;
 }
 
-.play-btn:hover:not(:disabled) {
+.play-btn:hover:not(:disabled),
+.pause-btn:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.play-btn:disabled {
+.play-btn:disabled,
+.pause-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.play-btn .play-label {
+.play-btn .play-label,
+.pause-btn .pause-label {
   color: inherit;
+}
+
+.play-btn {
+  background: var(--accent);
+  border: none;
+}
+
+.pause-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.pause-btn.active {
+  background: var(--error);
+  border-color: var(--error);
+  color: white;
 }
 
 .subtitle-text {

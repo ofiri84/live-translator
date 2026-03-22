@@ -19,6 +19,7 @@
 
   const subtitleEl = document.getElementById('subtitle');
   const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
   const statusEl = document.getElementById('status');
   const historyEl = document.getElementById('history');
   const listenBtn = document.getElementById('listenBtn');
@@ -119,6 +120,7 @@
       if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
+        updatePauseButton();
       }
       const voice = getVoiceGender();
       try {
@@ -132,29 +134,39 @@
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         currentAudio = audio;
+        updatePauseButton();
         audio.onended = () => {
           URL.revokeObjectURL(url);
           currentAudio = null;
+          updatePauseButton();
           resolve();
         };
         audio.onerror = () => {
           URL.revokeObjectURL(url);
           currentAudio = null;
+          updatePauseButton();
           reject();
         };
         audio.play();
       } catch (e) {
+        updatePauseButton();
         reject(e);
       }
     });
   }
 
-  async function speak(originalText, translatedText) {
-    const speakBoth = document.getElementById('speakBoth')?.checked;
+  function stopSpeech() {
     if (currentAudio) {
       currentAudio.pause();
+      currentAudio.currentTime = 0;
       currentAudio = null;
+      updatePauseButton();
     }
+  }
+
+  async function speak(originalText, translatedText) {
+    const speakBoth = document.getElementById('speakBoth')?.checked;
+    stopSpeech();
     if (speakBoth && originalText) {
       await speakOne(originalText).catch(() => {});
     }
@@ -183,6 +195,11 @@
     playBtn.disabled = !lastOriginal && !lastTranslated;
   }
 
+  function updatePauseButton() {
+    pauseBtn.disabled = !currentAudio;
+    pauseBtn.classList.toggle('active', !!currentAudio);
+  }
+
   async function processFinal(text) {
     const t = text.trim();
     if (!t) return;
@@ -194,7 +211,7 @@
       updatePlayButton();
       subtitleEl.textContent = translated;
       subtitleEl.classList.remove('listening');
-      speak(t, translated).catch(() => {});
+      speak(t, translated).catch(() => {});  // auto-play after translation
       addToHistory(t, translated, sourceLang);
     } catch (e) {
       const msg = e.message || 'Translation failed';
@@ -277,7 +294,12 @@
       .finally(() => { updatePlayButton(); });
   });
 
+  pauseBtn.addEventListener('click', () => {
+    stopSpeech();
+  });
+
   updatePlayButton();
+  updatePauseButton();
 
   subtitleEl.textContent = 'Speak in Czech or English...';
   fetch(`${API_BASE}/`).catch(() => { statusEl.textContent = 'Server unreachable'; });
