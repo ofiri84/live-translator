@@ -27,15 +27,21 @@ app.post('/api/translate-auto', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You translate between Czech and English. The user will give you text in EITHER Czech OR English.
-Your task: detect which language it is, then translate to the OTHER language.
-Reply in exactly this JSON format, nothing else: {"sourceLang":"cs" or "en", "translated":"the translation"}
-Rules: Natural, idiomatic translation. JSON only.`
+          content: `You translate between Czech and English. CRITICAL: First DETECT the language of the input, then translate to the OTHER language.
+
+Language detection rules:
+- Czech: uses ř, ě, š, č, ž, ý, á, í, ú, ů, ň, typical words (dobrý, děkuji, prosím, jak, co, kde, proč)
+- English: no diacritics, typical words (hello, thank you, please, how, what, where, why)
+- If unclear (e.g. "hello" vs "helo"), use word patterns and grammar to decide
+- NEVER assume Czech by default - analyze each input fresh
+
+Reply ONLY with valid JSON, nothing else: {"sourceLang":"cs" or "en", "translated":"the translation"}
+Examples: "Hello" → {"sourceLang":"en","translated":"Ahoj"}; "Ahoj" → {"sourceLang":"cs","translated":"Hello"}`
         },
         { role: 'user', content: text }
       ],
       max_tokens: 200,
-      temperature: 0.2
+      temperature: 0.1
     });
 
     const raw = completion.choices[0]?.message?.content?.trim() || '';

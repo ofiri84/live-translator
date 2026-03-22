@@ -6,7 +6,7 @@
     return;
   }
 
-  const RECOG_LANG = 'cs-CZ,en-US';
+  const RECOG_LANG = 'en-US,cs-CZ';
   const SETTINGS_KEY = 'live-translator-settings';
   let recognition = null;
   let isListening = false;
