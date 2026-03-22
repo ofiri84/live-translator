@@ -97,11 +97,16 @@
 
   loadSettings();
 
-  function translateAuto(text) {
+  let cachedAudioOriginal = null;
+  let cachedAudioTranslated = null;
+
+  function translateAndSpeak(text) {
+    const voice = getVoiceGender();
+    const speakBoth = document.getElementById('speakBoth')?.checked;
     return fetch(`${API_BASE}/api/translate-auto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, voice, speakBoth })
     })
       .then(r => {
         if (!r.ok) {
@@ -115,43 +120,34 @@
     return document.querySelector('input[name="voice"]:checked')?.value || 'female';
   }
 
-  function speakOne(text) {
-    return new Promise(async (resolve, reject) => {
+  function playBase64Audio(base64) {
+    return new Promise((resolve, reject) => {
       if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
         updatePauseButton();
       }
-      const voice = getVoiceGender();
-      try {
-        const res = await fetch(`${API_BASE}/api/speak`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, voice })
-        });
-        if (!res.ok) throw new Error('Speech failed');
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        currentAudio = audio;
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudio = audio;
+      updatePauseButton();
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        currentAudio = null;
         updatePauseButton();
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          currentAudio = null;
-          updatePauseButton();
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          currentAudio = null;
-          updatePauseButton();
-          reject();
-        };
-        audio.play();
-      } catch (e) {
+        resolve();
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        currentAudio = null;
         updatePauseButton();
-        reject(e);
-      }
+        reject();
+      };
+      audio.play();
     });
   }
 
@@ -164,14 +160,13 @@
     }
   }
 
-  async function speak(originalText, translatedText) {
-    const speakBoth = document.getElementById('speakBoth')?.checked;
+  async function speakFromCache() {
     stopSpeech();
-    if (speakBoth && originalText) {
-      await speakOne(originalText).catch(() => {});
+    if (cachedAudioOriginal) {
+      await playBase64Audio(cachedAudioOriginal).catch(() => {});
     }
-    if (translatedText) {
-      await speakOne(translatedText).catch(() => {});
+    if (cachedAudioTranslated) {
+      await playBase64Audio(cachedAudioTranslated).catch(() => {});
     }
   }
 
@@ -192,7 +187,7 @@
   }
 
   function updatePlayButton() {
-    playBtn.disabled = !lastOriginal && !lastTranslated;
+    playBtn.disabled = !cachedAudioOriginal && !cachedAudioTranslated;
   }
 
   function updatePauseButton() {
@@ -205,13 +200,15 @@
     if (!t) return;
     statusEl.textContent = 'Translating...';
     try {
-      const { translated, sourceLang } = await translateAuto(t);
+      const { translated, sourceLang, audioTranslated, audioOriginal } = await translateAndSpeak(t);
       lastOriginal = t;
       lastTranslated = translated;
+      cachedAudioTranslated = audioTranslated;
+      cachedAudioOriginal = audioOriginal;
       updatePlayButton();
       subtitleEl.textContent = translated;
       subtitleEl.classList.remove('listening');
-      speak(t, translated).catch(() => {});  // auto-play after translation
+      speakFromCache().catch(() => {});  // auto-play from combined response (no extra round-trip)
       addToHistory(t, translated, sourceLang);
     } catch (e) {
       const msg = e.message || 'Translation failed';
@@ -242,7 +239,7 @@
       debounceTimer = setTimeout(() => {
         processFinal(finalBuffer);
         finalBuffer = '';
-      }, 400);
+      }, 250);
     }
     if (interim && !final) {
       subtitleEl.textContent = interim;
@@ -287,9 +284,9 @@
   });
 
   playBtn.addEventListener('click', () => {
-    if (!lastOriginal && !lastTranslated) return;
+    if (!cachedAudioOriginal && !cachedAudioTranslated) return;
     playBtn.disabled = true;
-    speak(lastOriginal, lastTranslated)
+    speakFromCache()
       .catch(() => {})
       .finally(() => { updatePlayButton(); });
   });

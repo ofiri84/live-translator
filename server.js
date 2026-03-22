@@ -46,7 +46,33 @@ Rules: Natural, idiomatic translation. JSON only.`
       parsed = { sourceLang: 'en', translated: raw };
     }
     const { sourceLang = 'en', translated } = parsed;
-    res.json({ translated, sourceLang });
+
+    const voice = req.body.voice || 'female';
+    const speakBoth = !!req.body.speakBoth;
+    const TTS_VOICES = { female: 'nova', male: 'onyx' };
+    const openaiVoice = TTS_VOICES[voice] || TTS_VOICES.female;
+
+    const ttsTasks = [
+      openai.audio.speech.create({ model: 'tts-1', voice: openaiVoice, input: translated.slice(0, 4096) })
+    ];
+    if (speakBoth && text) {
+      ttsTasks.push(openai.audio.speech.create({ model: 'tts-1', voice: openaiVoice, input: text.slice(0, 4096) }));
+    }
+    const ttsResults = await Promise.all(ttsTasks);
+    const audioTranslated = ttsResults[0];
+    const audioOriginal = ttsResults[1] || null;
+
+    const [bufTrans, bufOrig] = await Promise.all([
+      audioTranslated.arrayBuffer(),
+      audioOriginal ? audioOriginal.arrayBuffer() : Promise.resolve(null)
+    ]);
+
+    res.json({
+      translated,
+      sourceLang,
+      audioTranslated: Buffer.from(bufTrans).toString('base64'),
+      audioOriginal: bufOrig ? Buffer.from(bufOrig).toString('base64') : null
+    });
   } catch (err) {
     console.error('Translate-auto error:', err.message);
     res.status(500).json({ error: err.message || 'Translation failed' });
@@ -104,7 +130,7 @@ app.post('/api/speak', async (req, res) => {
     }
     const openaiVoice = TTS_VOICES[voice] || TTS_VOICES.female;
     const mp3 = await openai.audio.speech.create({
-      model: 'tts-1-hd',
+      model: 'tts-1',
       voice: openaiVoice,
       input: text.slice(0, 4096)
     });

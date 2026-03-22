@@ -20,7 +20,7 @@ module.exports = async function handler(req, res) {
     }
     const openaiVoice = TTS_VOICES[voice] || TTS_VOICES.female;
     const mp3 = await openai.audio.speech.create({
-      model: 'tts-1-hd',
+      model: 'tts-1',
       voice: openaiVoice,
       input: String(text).slice(0, 4096)
     });

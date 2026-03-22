@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const TTS_VOICES = { female: 'nova', male: 'onyx' };
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,7 +14,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { text } = req.body || {};
+    const { text, voice = 'female', speakBoth = false } = req.body || {};
     if (!text) return res.status(400).json({ error: 'Missing text' });
 
     const completion = await openai.chat.completions.create({
@@ -40,7 +41,29 @@ Rules: Natural, idiomatic translation. JSON only.`
       parsed = { sourceLang: 'en', translated: raw };
     }
     const { sourceLang = 'en', translated } = parsed;
-    res.json({ translated, sourceLang });
+    const openaiVoice = TTS_VOICES[voice] || TTS_VOICES.female;
+
+    const ttsTasks = [
+      openai.audio.speech.create({ model: 'tts-1', voice: openaiVoice, input: translated.slice(0, 4096) })
+    ];
+    if (speakBoth && text) {
+      ttsTasks.push(openai.audio.speech.create({ model: 'tts-1', voice: openaiVoice, input: String(text).slice(0, 4096) }));
+    }
+    const ttsResults = await Promise.all(ttsTasks);
+    const audioTranslated = ttsResults[0];
+    const audioOriginal = ttsResults[1] || null;
+
+    const [bufTrans, bufOrig] = await Promise.all([
+      audioTranslated.arrayBuffer(),
+      audioOriginal ? audioOriginal.arrayBuffer() : Promise.resolve(null)
+    ]);
+
+    res.json({
+      translated,
+      sourceLang,
+      audioTranslated: Buffer.from(bufTrans).toString('base64'),
+      audioOriginal: bufOrig ? Buffer.from(bufOrig).toString('base64') : null
+    });
   } catch (err) {
     console.error('Translate-auto error:', err.message);
     res.status(500).json({ error: err.message || 'Translation failed' });
