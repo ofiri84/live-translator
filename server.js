@@ -58,6 +58,28 @@ Preserve the tone (formal/informal) and intent. Use natural phrasing for the tar
   }
 });
 
+const TTS_VOICES = { female: 'nova', male: 'onyx' };
+
+app.post('/api/speak', async (req, res) => {
+  try {
+    const { text, voice } = req.body;
+    if (!text || !voice) {
+      return res.status(400).json({ error: 'Missing text or voice' });
+    }
+    const openaiVoice = TTS_VOICES[voice] || TTS_VOICES.female;
+    const mp3 = await openai.audio.speech.create({
+      model: 'tts-1-hd',
+      voice: openaiVoice,
+      input: text.slice(0, 4096)
+    });
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(Buffer.from(await mp3.arrayBuffer()));
+  } catch (err) {
+    console.error('TTS error:', err.message);
+    res.status(500).json({ error: err.message || 'Speech failed' });
+  }
+});
+
 function getLocalIp() {
   const ifaces = os.networkInterfaces();
   for (const name of Object.keys(ifaces)) {

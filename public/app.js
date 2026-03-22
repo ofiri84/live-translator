@@ -16,7 +16,7 @@
   let isListening = false;
   let finalBuffer = '';
   let debounceTimer = null;
-  let lastUtterance = null;
+  let currentAudio = null;
 
   const subtitleEl = document.getElementById('subtitle');
   const statusEl = document.getElementById('status');
@@ -61,31 +61,31 @@
     return document.querySelector('input[name="voice"]:checked')?.value || 'female';
   }
 
-  function pickVoice(voices, lang, gender) {
-    const langPrefix = lang === 'cs' ? 'cs' : 'en';
-    const forLang = voices.filter(v => v.lang.startsWith(langPrefix));
-    const femaleHints = /female|woman|zira|samantha|victoria|karen|anna|monica|aria|helena|susan/i;
-    const maleHints = /male|man|david|daniel|alex|james|mark|paul|ralph|fred|george/i;
-    const isFemale = v => femaleHints.test(v.name) || (!maleHints.test(v.name) && v.name.toLowerCase().includes('female'));
-    const isMale = v => maleHints.test(v.name) || v.name.toLowerCase().includes('male');
-    const pick = gender === 'female' ? isFemale : isMale;
-    const fallback = gender === 'female' ? isMale : isFemale;
-    return forLang.find(pick) || forLang.find(fallback) || forLang[0] || voices.find(pick) || voices[0];
-  }
-
-  function speak(text, lang) {
-    if (lastUtterance) {
-      window.speechSynthesis.cancel();
+  async function speak(text, lang) {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
     }
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang === 'cs' ? 'cs-CZ' : 'en-US';
-    u.rate = 0.95;
-    u.pitch = 1;
-    const voices = speechSynthesis.getVoices();
-    const preferred = pickVoice(voices, lang, getVoiceGender());
-    if (preferred) u.voice = preferred;
-    lastUtterance = u;
-    speechSynthesis.speak(u);
+    const voice = getVoiceGender();
+    const res = await fetch(`${API_BASE}/api/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice })
+    });
+    if (!res.ok) throw new Error('Speech failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+    };
+    audio.play();
   }
 
   function addToHistory(orig, trans) {
@@ -111,7 +111,7 @@
       const translated = await translate(t, cfg.source, cfg.target);
       subtitleEl.textContent = translated;
       subtitleEl.classList.remove('listening');
-      speak(translated, cfg.target);
+      speak(translated, cfg.target).catch(() => {});
       addToHistory(t, translated);
     } catch (e) {
       const msg = e.message || 'Translation failed';
@@ -194,10 +194,6 @@
       }
     });
   });
-
-  if (speechSynthesis) {
-    speechSynthesis.onvoiceschanged = () => {};
-  }
 
   setMode('listen');
 
