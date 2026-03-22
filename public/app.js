@@ -23,6 +23,7 @@
   const statusEl = document.getElementById('status');
   const historyEl = document.getElementById('history');
   const listenBtn = document.getElementById('listenBtn');
+  const clearBtn = document.getElementById('clearBtn');
   const settingsBtn = document.getElementById('settingsBtn');
   const settingsPanel = document.getElementById('settingsPanel');
   const settingsOverlay = document.getElementById('settingsOverlay');
@@ -301,6 +302,19 @@
 
   pauseBtn.addEventListener('click', () => {
     stopSpeech();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    historyEl.innerHTML = '';
+    lastOriginal = '';
+    lastTranslated = '';
+    cachedAudioOriginal = null;
+    cachedAudioTranslated = null;
+    stopSpeech();
+    updatePlayButton();
+    subtitleEl.textContent = 'Speak in Czech or English...';
+    subtitleEl.classList.remove('listening');
+    statusEl.textContent = isListening ? 'Listening...' : 'Ready — speak Czech or English';
   });
 
   updatePlayButton();

@@ -349,6 +349,36 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.history-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.clear-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.clear-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
 .history {
   display: flex;
   flex-direction: column;
