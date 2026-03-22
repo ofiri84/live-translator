@@ -1,5 +1,7 @@
 # Live Translator · Czech ↔ English
 
+**Live at [eng2czk.vercel.app](https://eng2czk.vercel.app/)**
+
 Real-time speech translation between Czech and English using AI. Two modes:
 
 - **Listen**: Hear Czech → get English subtitle + spoken English
