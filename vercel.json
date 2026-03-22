@@ -1,5 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo 'No build needed'",
+  "framework": null,
+  "buildCommand": "echo done",
   "outputDirectory": "public"
 }
