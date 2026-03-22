@@ -17,8 +17,11 @@
   let finalBuffer = '';
   let debounceTimer = null;
   let currentAudio = null;
+  let lastOriginal = '';
+  let lastTranslated = '';
 
   const subtitleEl = document.getElementById('subtitle');
+  const playBtn = document.getElementById('playBtn');
   const statusEl = document.getElementById('status');
   const historyEl = document.getElementById('history');
   const listenBtn = document.getElementById('listenBtn');
@@ -131,6 +134,9 @@
     statusEl.textContent = 'Translating...';
     try {
       const translated = await translate(t, cfg.source, cfg.target);
+      lastOriginal = t;
+      lastTranslated = translated;
+      updatePlayButton();
       subtitleEl.textContent = translated;
       subtitleEl.classList.remove('listening');
       speak(t, translated, cfg.source, cfg.target).catch(() => {});
@@ -205,6 +211,20 @@
   listenBtn.addEventListener('click', () => {
     isListening ? stopListening() : startListening();
   });
+
+  function updatePlayButton() {
+    playBtn.disabled = !lastOriginal && !lastTranslated;
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (!lastOriginal && !lastTranslated) return;
+    playBtn.disabled = true;
+    speak(lastOriginal, lastTranslated, modes[currentMode].source, modes[currentMode].target)
+      .catch(() => {})
+      .finally(() => { updatePlayButton(); });
+  });
+
+  updatePlayButton();
 
   modeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
