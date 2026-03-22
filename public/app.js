@@ -6,12 +6,7 @@
     return;
   }
 
-  const modes = {
-    listen: { source: 'cs', target: 'en', recogLang: 'cs-CZ', sourceLabel: 'Čeština', targetLabel: 'English' },
-    talk: { source: 'en', target: 'cs', recogLang: 'en-US', sourceLabel: 'English', targetLabel: 'Čeština' }
-  };
-
-  let currentMode = 'listen';
+  const RECOG_LANG = 'cs-CZ,en-US';
   let recognition = null;
   let isListening = false;
   let finalBuffer = '';
@@ -25,39 +20,23 @@
   const statusEl = document.getElementById('status');
   const historyEl = document.getElementById('history');
   const listenBtn = document.getElementById('listenBtn');
-  const modeBtns = document.querySelectorAll('.mode-btn');
-  const sourceLabels = document.querySelectorAll('.source-label');
-  const targetLabels = document.querySelectorAll('.target-label');
-
-  function setMode(mode) {
-    currentMode = mode;
-    const cfg = modes[mode];
-    modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-    sourceLabels.forEach(el => { el.textContent = cfg.sourceLabel; });
-    targetLabels.forEach(el => { el.textContent = cfg.targetLabel; });
-    if (recognition) recognition.lang = cfg.recogLang;
-    subtitleEl.textContent = 'Listening...';
-    subtitleEl.classList.add('listening');
-    statusEl.textContent = `Mode: ${mode === 'listen' ? 'Czech → English' : 'English → Czech'}`;
-  }
 
   const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
     ? window.location.origin
     : 'http://localhost:3000';
 
-  function translate(text, sourceLang, targetLang) {
-    return fetch(`${API_BASE}/api/translate`, {
+  function translateAuto(text) {
+    return fetch(`${API_BASE}/api/translate-auto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, sourceLang, targetLang })
+      body: JSON.stringify({ text })
     })
       .then(r => {
         if (!r.ok) {
           return r.json().then(d => { throw new Error(d.error || d.message || 'Server error'); }).catch(() => { throw new Error('Server error ' + r.status); });
         }
         return r.json();
-      })
-      .then(d => d.translated || '');
+      });
   }
 
   function getVoiceGender() {
@@ -99,7 +78,7 @@
     });
   }
 
-  async function speak(originalText, translatedText, sourceLang, targetLang) {
+  async function speak(originalText, translatedText) {
     const speakBoth = document.getElementById('speakBoth')?.checked;
     if (currentAudio) {
       currentAudio.pause();
@@ -113,10 +92,12 @@
     }
   }
 
-  function addToHistory(orig, trans) {
+  function addToHistory(orig, trans, srcLang) {
+    const srcLabel = srcLang === 'cs' ? 'Čeština' : 'English';
+    const tgtLabel = srcLang === 'cs' ? 'English' : 'Čeština';
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.innerHTML = `<div class="orig">${escapeHtml(orig)}</div><div class="trans">${escapeHtml(trans)}</div>`;
+    item.innerHTML = `<div class="orig"><strong>${escapeHtml(srcLabel)}:</strong> ${escapeHtml(orig)}</div><div class="trans"><strong>${escapeHtml(tgtLabel)}:</strong> ${escapeHtml(trans)}</div>`;
     historyEl.insertBefore(item, historyEl.firstChild);
     while (historyEl.children.length > 20) historyEl.removeChild(historyEl.lastChild);
   }
@@ -127,24 +108,27 @@
     return div.innerHTML;
   }
 
+  function updatePlayButton() {
+    playBtn.disabled = !lastOriginal && !lastTranslated;
+  }
+
   async function processFinal(text) {
     const t = text.trim();
     if (!t) return;
-    const cfg = modes[currentMode];
     statusEl.textContent = 'Translating...';
     try {
-      const translated = await translate(t, cfg.source, cfg.target);
+      const { translated, sourceLang } = await translateAuto(t);
       lastOriginal = t;
       lastTranslated = translated;
       updatePlayButton();
       subtitleEl.textContent = translated;
       subtitleEl.classList.remove('listening');
-      speak(t, translated, cfg.source, cfg.target).catch(() => {});
-      addToHistory(t, translated);
+      speak(t, translated).catch(() => {});
+      addToHistory(t, translated, sourceLang);
     } catch (e) {
       const msg = e.message || 'Translation failed';
       subtitleEl.textContent = msg === 'Failed to fetch' || msg === 'network' || msg.includes('NetworkError')
-        ? 'Network error — is the server running? Open http://localhost:3000'
+        ? 'Network error — is the server running?'
         : 'Error: ' + msg;
       subtitleEl.classList.remove('listening');
     }
@@ -182,7 +166,7 @@
       recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = modes[currentMode].recogLang;
+      recognition.lang = RECOG_LANG;
       recognition.onresult = onResult;
       recognition.onerror = (e) => {
         if (e.error !== 'no-speech') statusEl.textContent = 'Error: ' + e.error;
@@ -190,8 +174,6 @@
       recognition.onend = () => {
         if (isListening) recognition.start();
       };
-    } else {
-      recognition.lang = modes[currentMode].recogLang;
     }
     recognition.start();
     isListening = true;
@@ -212,32 +194,16 @@
     isListening ? stopListening() : startListening();
   });
 
-  function updatePlayButton() {
-    playBtn.disabled = !lastOriginal && !lastTranslated;
-  }
-
   playBtn.addEventListener('click', () => {
     if (!lastOriginal && !lastTranslated) return;
     playBtn.disabled = true;
-    speak(lastOriginal, lastTranslated, modes[currentMode].source, modes[currentMode].target)
+    speak(lastOriginal, lastTranslated)
       .catch(() => {})
       .finally(() => { updatePlayButton(); });
   });
 
   updatePlayButton();
 
-  modeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.dataset.mode === currentMode) return;
-      setMode(btn.dataset.mode);
-      if (isListening) {
-        stopListening();
-        startListening();
-      }
-    });
-  });
-
-  setMode('listen');
-
-  fetch(`${API_BASE}/`).catch(() => { statusEl.textContent = 'Server unreachable — run: npm start in live-translator folder'; });
+  subtitleEl.textContent = 'Speak in Czech or English...';
+  fetch(`${API_BASE}/`).catch(() => { statusEl.textContent = 'Server unreachable'; });
 })();

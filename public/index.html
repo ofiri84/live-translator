@@ -17,26 +17,12 @@
   <div class="app">
     <header class="header">
       <h1 class="title">Live Translator</h1>
-      <p class="subtitle">Czech ↔ English · AI-powered</p>
-      <div class="mode-switch">
-        <button class="mode-btn active" data-mode="listen" aria-pressed="true">
-          <span class="mode-icon">👂</span>
-          <span>Listen</span>
-          <span class="mode-desc">Czech → English</span>
-        </button>
-        <button class="mode-btn" data-mode="talk" aria-pressed="false">
-          <span class="mode-icon">🎤</span>
-          <span>Talk</span>
-          <span class="mode-desc">English → Czech</span>
-        </button>
-      </div>
+      <p class="subtitle">Czech ↔ English · auto-detect · AI-powered</p>
     </header>
 
     <main class="main">
       <div class="subtitle-panel">
-        <div class="source-label"></div>
-        <p class="subtitle-text" id="subtitle">Listening...</p>
-        <div class="target-label"></div>
+        <p class="subtitle-text" id="subtitle">Speak in Czech or English...</p>
         <button class="play-btn" id="playBtn" aria-label="Play speech" title="Play">
           <span class="play-icon">🔊</span>
           <span class="play-label">Play</span>
@@ -44,7 +30,7 @@
       </div>
 
       <div class="voice-selector">
-        <span class="voice-label">Voice (AI):</span>
+        <span class="voice-label">Voice:</span>
         <div class="voice-options">
           <label class="voice-option"><input type="radio" name="voice" value="female" checked> Female</label>
           <label class="voice-option"><input type="radio" name="voice" value="male"> Male</label>
@@ -54,10 +40,10 @@
 
       <div class="controls">
         <button class="ctrl-btn listen-btn" id="listenBtn" aria-label="Start listening">
-          <span class="ctrl-icon"></span>
+          <span class="ctrl-icon">🎤</span>
           <span class="ctrl-label">Start Listening</span>
         </button>
-        <div class="status" id="status">Ready</div>
+        <div class="status" id="status">Ready — speak Czech or English</div>
       </div>
 
       <div class="history" id="history"></div>

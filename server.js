@@ -17,6 +17,42 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+app.post('/api/translate-auto', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: 'Missing text' });
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You translate between Czech and English. The user will give you text in EITHER Czech OR English.
+Your task: detect which language it is, then translate to the OTHER language.
+Reply in exactly this JSON format, nothing else: {"sourceLang":"cs" or "en", "translated":"the translation"}
+Rules: Natural, idiomatic translation. JSON only.`
+        },
+        { role: 'user', content: text }
+      ],
+      max_tokens: 200,
+      temperature: 0.2
+    });
+
+    const raw = completion.choices[0]?.message?.content?.trim() || '';
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json?\s*|\s*```/g, ''));
+    } catch {
+      parsed = { sourceLang: 'en', translated: raw };
+    }
+    const { sourceLang = 'en', translated } = parsed;
+    res.json({ translated, sourceLang });
+  } catch (err) {
+    console.error('Translate-auto error:', err.message);
+    res.status(500).json({ error: err.message || 'Translation failed' });
+  }
+});
+
 app.post('/api/translate', async (req, res) => {
   try {
     const { text, sourceLang, targetLang } = req.body;
