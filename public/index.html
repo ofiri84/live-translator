@@ -16,9 +16,40 @@
 <body>
   <div class="app">
     <header class="header">
+      <button class="settings-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
       <h1 class="title">Live Translator</h1>
       <p class="subtitle">Czech ↔ English · auto-detect · AI-powered</p>
     </header>
+
+    <div class="settings-overlay" id="settingsOverlay"></div>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button class="settings-close" id="settingsClose" aria-label="Close">✕</button>
+      </div>
+      <div class="settings-content">
+        <label class="settings-row">
+          <span>Auto-stop after silence</span>
+          <select id="silenceTimeout">
+            <option value="2">2 seconds</option>
+            <option value="3" selected>3 seconds</option>
+            <option value="5">5 seconds</option>
+            <option value="10">10 seconds</option>
+            <option value="0">Never (manual stop)</option>
+          </select>
+        </label>
+        <label class="settings-row">
+          <span>Voice</span>
+          <div class="voice-options">
+            <label class="voice-option"><input type="radio" name="voice" value="female" checked> Female</label>
+            <label class="voice-option"><input type="radio" name="voice" value="male"> Male</label>
+          </div>
+        </label>
+        <label class="settings-row settings-row-check">
+          <input type="checkbox" id="speakBoth"> Speak both languages
+        </label>
+      </div>
+    </div>
 
     <main class="main">
       <div class="subtitle-panel">
@@ -27,15 +58,6 @@
           <span class="play-icon">🔊</span>
           <span class="play-label">Play</span>
         </button>
-      </div>
-
-      <div class="voice-selector">
-        <span class="voice-label">Voice:</span>
-        <div class="voice-options">
-          <label class="voice-option"><input type="radio" name="voice" value="female" checked> Female</label>
-          <label class="voice-option"><input type="radio" name="voice" value="male"> Male</label>
-        </div>
-        <label class="voice-option speak-both-opt"><input type="checkbox" id="speakBoth"> Speak both</label>
       </div>
 
       <div class="controls">

@@ -7,10 +7,12 @@
   }
 
   const RECOG_LANG = 'cs-CZ,en-US';
+  const SETTINGS_KEY = 'live-translator-settings';
   let recognition = null;
   let isListening = false;
   let finalBuffer = '';
   let debounceTimer = null;
+  let silenceTimer = null;
   let currentAudio = null;
   let lastOriginal = '';
   let lastTranslated = '';
@@ -20,10 +22,79 @@
   const statusEl = document.getElementById('status');
   const historyEl = document.getElementById('history');
   const listenBtn = document.getElementById('listenBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const settingsClose = document.getElementById('settingsClose');
+  const silenceTimeoutSelect = document.getElementById('silenceTimeout');
 
   const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
     ? window.location.origin
     : 'http://localhost:3000';
+
+  function loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      if (s.silenceTimeout != null) silenceTimeoutSelect.value = String(s.silenceTimeout);
+      if (s.voice) document.querySelector(`input[name="voice"][value="${s.voice}"]`)?.click();
+      if (s.speakBoth != null) document.getElementById('speakBoth').checked = s.speakBoth;
+    } catch (_) {}
+  }
+
+  function saveSettings() {
+    const s = {
+      silenceTimeout: parseInt(silenceTimeoutSelect.value, 10) || 3,
+      voice: document.querySelector('input[name="voice"]:checked')?.value || 'female',
+      speakBoth: document.getElementById('speakBoth').checked
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  }
+
+  function getSilenceTimeoutSec() {
+    return parseInt(silenceTimeoutSelect.value, 10) || 3;
+  }
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+    const sec = getSilenceTimeoutSec();
+    if (sec > 0 && isListening) {
+      silenceTimer = setTimeout(() => {
+        if (isListening) {
+          stopListening();
+          statusEl.textContent = 'Stopped (silence)';
+        }
+      }, sec * 1000);
+    }
+  }
+
+  function clearSilenceTimer() {
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+  }
+
+  function openSettings() {
+    settingsPanel.classList.add('open');
+    settingsOverlay.classList.add('open');
+    loadSettings();
+  }
+
+  function closeSettings() {
+    settingsPanel.classList.remove('open');
+    settingsOverlay.classList.remove('open');
+    saveSettings();
+  }
+
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', closeSettings);
+  silenceTimeoutSelect.addEventListener('change', saveSettings);
+  document.getElementById('speakBoth').addEventListener('change', saveSettings);
+  document.querySelectorAll('input[name="voice"]').forEach(el => {
+    el.addEventListener('change', saveSettings);
+  });
+
+  loadSettings();
 
   function translateAuto(text) {
     return fetch(`${API_BASE}/api/translate-auto`, {
@@ -136,6 +207,7 @@
   }
 
   function onResult(event) {
+    resetSilenceTimer();
     let interim = '';
     let final = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -162,6 +234,7 @@
   }
 
   function startListening() {
+    clearSilenceTimer();
     if (!recognition) {
       recognition = new SpeechRecognition();
       recognition.continuous = true;
@@ -180,10 +253,12 @@
     listenBtn.classList.add('listening');
     listenBtn.querySelector('.ctrl-label').textContent = 'Stop';
     statusEl.textContent = 'Listening...';
+    resetSilenceTimer();
   }
 
   function stopListening() {
     isListening = false;
+    clearSilenceTimer();
     if (recognition) recognition.stop();
     listenBtn.classList.remove('listening');
     listenBtn.querySelector('.ctrl-label').textContent = 'Start Listening';

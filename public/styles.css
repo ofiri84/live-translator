@@ -49,8 +49,125 @@ body {
 }
 
 .header {
+  position: relative;
   text-align: center;
   margin-bottom: 2rem;
+}
+
+.settings-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  opacity: 0.7;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-btn:hover {
+  opacity: 1;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 100;
+}
+
+.settings-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 100%);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-panel.open {
+  transform: translateX(0);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-close:hover {
+  color: var(--text);
+}
+
+.settings-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.settings-row span {
+  color: var(--text-muted);
+}
+
+.settings-row select {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.settings-row-check {
+  flex-direction: row;
+  align-items: center;
+}
+
+.settings-row-check input {
+  accent-color: var(--accent);
 }
 
 .title {
@@ -133,19 +250,6 @@ body {
   font-style: italic;
 }
 
-.voice-selector {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.5rem 0;
-}
-
-.voice-label {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
 .voice-options {
   display: flex;
   gap: 1rem;
@@ -162,22 +266,6 @@ body {
 
 .voice-option input {
   accent-color: var(--accent);
-}
-
-.speak-both-opt {
-  margin-left: auto;
-}
-
-@media (max-width: 480px) {
-  .voice-selector {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-  .speak-both-opt {
-    margin-left: 0;
-    width: 100%;
-    margin-top: 0.25rem;
-  }
 }
 
 .controls {
