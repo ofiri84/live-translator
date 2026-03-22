@@ -187,6 +187,22 @@ body {
   accent-color: var(--accent);
 }
 
+.speak-both-opt {
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .voice-selector {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .speak-both-opt {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+}
+
 .controls {
   display: flex;
   flex-direction: column;

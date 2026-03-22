@@ -61,31 +61,53 @@
     return document.querySelector('input[name="voice"]:checked')?.value || 'female';
   }
 
-  async function speak(text, lang) {
+  function speakOne(text) {
+    return new Promise(async (resolve, reject) => {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      const voice = getVoiceGender();
+      try {
+        const res = await fetch(`${API_BASE}/api/speak`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voice })
+        });
+        if (!res.ok) throw new Error('Speech failed');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        currentAudio = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          currentAudio = null;
+          resolve();
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          currentAudio = null;
+          reject();
+        };
+        audio.play();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  async function speak(originalText, translatedText, sourceLang, targetLang) {
+    const speakBoth = document.getElementById('speakBoth')?.checked;
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
     }
-    const voice = getVoiceGender();
-    const res = await fetch(`${API_BASE}/api/speak`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice })
-    });
-    if (!res.ok) throw new Error('Speech failed');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    currentAudio = audio;
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      currentAudio = null;
-    };
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      currentAudio = null;
-    };
-    audio.play();
+    if (speakBoth && originalText) {
+      await speakOne(originalText).catch(() => {});
+    }
+    if (translatedText) {
+      await speakOne(translatedText).catch(() => {});
+    }
   }
 
   function addToHistory(orig, trans) {
@@ -111,7 +133,7 @@
       const translated = await translate(t, cfg.source, cfg.target);
       subtitleEl.textContent = translated;
       subtitleEl.classList.remove('listening');
-      speak(translated, cfg.target).catch(() => {});
+      speak(t, translated, cfg.source, cfg.target).catch(() => {});
       addToHistory(t, translated);
     } catch (e) {
       const msg = e.message || 'Translation failed';
