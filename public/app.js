@@ -265,10 +265,13 @@
       recognition.lang = RECOG_LANG;
       recognition.onresult = onResult;
       recognition.onerror = (e) => {
-        if (e.error !== 'no-speech') statusEl.textContent = 'Error: ' + e.error;
+        const ignore = ['no-speech', 'aborted'];
+        const fatal = ['not-allowed', 'service-not-allowed', 'network'];
+        if (fatal.includes(e.error)) stopListening();
+        else if (!ignore.includes(e.error)) statusEl.textContent = 'Error: ' + e.error;
       };
       recognition.onend = () => {
-        if (isListening) recognition.start();
+        if (isListening) setTimeout(() => { if (isListening && recognition) try { recognition.start(); } catch (_) {} }, 200);
       };
     }
     recognition.start();
