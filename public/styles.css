@@ -156,6 +156,37 @@ body {
   font-style: italic;
 }
 
+.voice-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.voice-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.voice-options {
+  display: flex;
+  gap: 1rem;
+}
+
+.voice-option {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.voice-option input {
+  accent-color: var(--accent);
+}
+
 .controls {
   display: flex;
   flex-direction: column;

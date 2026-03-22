@@ -57,6 +57,22 @@
       .then(d => d.translated || '');
   }
 
+  function getVoiceGender() {
+    return document.querySelector('input[name="voice"]:checked')?.value || 'female';
+  }
+
+  function pickVoice(voices, lang, gender) {
+    const langPrefix = lang === 'cs' ? 'cs' : 'en';
+    const forLang = voices.filter(v => v.lang.startsWith(langPrefix));
+    const femaleHints = /female|woman|zira|samantha|victoria|karen|anna|monica|aria|helena|susan/i;
+    const maleHints = /male|man|david|daniel|alex|james|mark|paul|ralph|fred|george/i;
+    const isFemale = v => femaleHints.test(v.name) || (!maleHints.test(v.name) && v.name.toLowerCase().includes('female'));
+    const isMale = v => maleHints.test(v.name) || v.name.toLowerCase().includes('male');
+    const pick = gender === 'female' ? isFemale : isMale;
+    const fallback = gender === 'female' ? isMale : isFemale;
+    return forLang.find(pick) || forLang.find(fallback) || forLang[0] || voices.find(pick) || voices[0];
+  }
+
   function speak(text, lang) {
     if (lastUtterance) {
       window.speechSynthesis.cancel();
@@ -66,7 +82,7 @@
     u.rate = 0.95;
     u.pitch = 1;
     const voices = speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang.startsWith(lang));
+    const preferred = pickVoice(voices, lang, getVoiceGender());
     if (preferred) u.voice = preferred;
     lastUtterance = u;
     speechSynthesis.speak(u);
