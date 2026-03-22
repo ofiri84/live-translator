@@ -203,13 +203,17 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  position: relative;
+}
+
+.subtitle-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 .play-btn {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
   display: flex;
   align-items: center;
   gap: 0.4rem;
