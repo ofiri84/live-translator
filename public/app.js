@@ -36,23 +36,24 @@
   function loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-      if (s.silenceTimeout != null) silenceTimeoutSelect.value = String(s.silenceTimeout);
+      if (silenceTimeoutSelect && s.silenceTimeout != null) silenceTimeoutSelect.value = String(s.silenceTimeout);
       if (s.voice) document.querySelector(`input[name="voice"][value="${s.voice}"]`)?.click();
-      if (s.speakBoth != null) document.getElementById('speakBoth').checked = s.speakBoth;
+      const sb = document.getElementById('speakBoth');
+      if (sb && s.speakBoth != null) sb.checked = s.speakBoth;
     } catch (_) {}
   }
 
   function saveSettings() {
     const s = {
-      silenceTimeout: parseInt(silenceTimeoutSelect.value, 10) || 3,
+      silenceTimeout: parseInt(silenceTimeoutSelect?.value, 10) || 3,
       voice: document.querySelector('input[name="voice"]:checked')?.value || 'female',
-      speakBoth: document.getElementById('speakBoth').checked
+      speakBoth: document.getElementById('speakBoth')?.checked ?? false
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   }
 
   function getSilenceTimeoutSec() {
-    return parseInt(silenceTimeoutSelect.value, 10) || 3;
+    return silenceTimeoutSelect ? parseInt(silenceTimeoutSelect.value, 10) || 3 : 3;
   }
 
   function resetSilenceTimer() {
@@ -122,6 +123,10 @@
 
   function playBase64Audio(base64) {
     return new Promise((resolve, reject) => {
+      if (!base64 || typeof base64 !== 'string') {
+        resolve();
+        return;
+      }
       if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
@@ -187,12 +192,14 @@
   }
 
   function updatePlayButton() {
-    playBtn.disabled = !cachedAudioOriginal && !cachedAudioTranslated;
+    if (playBtn) playBtn.disabled = !cachedAudioOriginal && !cachedAudioTranslated;
   }
 
   function updatePauseButton() {
-    pauseBtn.disabled = !currentAudio;
-    pauseBtn.classList.toggle('active', !!currentAudio);
+    if (pauseBtn) {
+      pauseBtn.disabled = !currentAudio;
+      pauseBtn.classList.toggle('active', !!currentAudio);
+    }
   }
 
   async function processFinal(text) {
@@ -217,17 +224,18 @@
         : 'Error: ' + msg;
       subtitleEl.classList.remove('listening');
     }
-    statusEl.textContent = 'Listening...';
+    statusEl.textContent = isListening ? 'Listening...' : 'Ready';
   }
 
   function onResult(event) {
     resetSilenceTimer();
     let interim = '';
     let final = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
+    if (!event.results || !event.results.length) return;
+    for (let i = event.resultIndex ?? 0; i < event.results.length; i++) {
       const r = event.results[i];
-      const t = r[0].transcript;
-      if (r.isFinal) {
+      const t = r?.[0]?.transcript ?? '';
+      if (r?.isFinal) {
         final += t;
       } else {
         interim += t;

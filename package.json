@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "mobile": "cross-env USE_HTTPS=1 node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "node test-api.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
